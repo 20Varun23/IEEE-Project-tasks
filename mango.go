@@ -87,7 +87,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	t, err := template.ParseFiles(file)
 
 	if err != nil {
-		fmt.Println("Sorry bro, parsing only didnt happen")
+		fmt.Println("Parsing failed")
 	}
 
 	err = t.ExecuteTemplate(w, file, nil)
