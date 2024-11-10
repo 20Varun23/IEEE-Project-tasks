@@ -111,5 +111,3 @@ func main() {
 	fmt.Println("Server running on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
-
-// http://localhost:8080/r/olfvv
