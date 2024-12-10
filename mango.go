@@ -7,10 +7,15 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"sync"
 )
 
 // Create a DS for mapping between shortened version and normal URL
-var shortURLs = make(map[string]string)
+
+type SafeMap struct {
+	mu        sync.Mutex
+	shortURLs map[string]string
+}
 
 type JSONreq struct {
 	URL string `json:"url"`
@@ -34,7 +39,9 @@ func generateShortCode() string {
 }
 
 // Shorten URL handler
-func shortenURLHandler(w http.ResponseWriter, r *http.Request) {
+func (s *SafeMap) shortenURLHandler(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// Parse original URL from request body
 	reqBody, err1 := io.ReadAll(r.Body)
@@ -52,15 +59,15 @@ func shortenURLHandler(w http.ResponseWriter, r *http.Request) {
 	var normalURL = data.URL
 	// Generate unique short code
 	shortURL := generateShortCode()
-	_, exists := shortURLs[shortURL]
+	_, exists := s.shortURLs[shortURL]
 
 	for exists == true {
 		shortURL = generateShortCode()
-		_, exists = shortURLs[shortURL]
+		_, exists = s.shortURLs[shortURL]
 	}
 
 	// Store the mapping
-	shortURLs[shortURL] = normalURL
+	s.shortURLs[shortURL] = normalURL
 	fmt.Println(normalURL, " ", shortURL)
 
 	// Send back the short URL as response
@@ -74,10 +81,13 @@ func shortenURLHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Redirect handler
-func redirectHandler(w http.ResponseWriter, r *http.Request) {
+func (s *SafeMap) redirectHandler(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	str := r.URL.Path[3:]
-	fmt.Println(shortURLs[str])
-	http.Redirect(w, r, shortURLs[str], http.StatusFound)
+	fmt.Println(s.shortURLs[str])
+	http.Redirect(w, r, s.shortURLs[str], http.StatusFound)
 }
 
 // Serve frontend index.html file
@@ -99,14 +109,16 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	var s = SafeMap{shortURLs: make(map[string]string)}
+
 	// Route for serving the frontend page
 	http.HandleFunc("/", indexHandler)
 
 	// Route for the API to shorten URLs
-	http.HandleFunc("/shorten", shortenURLHandler)
+	http.HandleFunc("/shorten", s.shortenURLHandler)
 
 	// Route for handling redirects
-	http.HandleFunc("/r/", redirectHandler)
+	http.HandleFunc("/r/", s.redirectHandler)
 
 	fmt.Println("Server running on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
