@@ -27,7 +27,7 @@ type JSONres struct {
 
 // Generate a random short code
 func generateShortCode() string {
-	charset := "qwertyuiopasdfghjklzxcvbnm" //defining char set
+	charset := "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890" //defining char set
 	str := ""
 
 	for i := 0; i < 5; i++ {
